@@ -1,20 +1,20 @@
-const digimonAnimations = {
-    "1_idle": [0, 1, 7],
-    "2_eat": [0, 9, 8],
-    "3_foodRejectRefuse": [10],
-    "4_trainReady": [4],
-    "5_trainFire": [5],
-    "6_trainSuccessPoopWin": [1, 2],
-    "7_trainFailTreatment": [6, 3],
-    "8_sleep": [11, 12],
-    "9_freezeThaw": [0, 14, 2],
-    "10_sick": [13, 14],
-    "11_evolve": [14],
-    "12_battleStart": [1, 7],
-    "13_battleFire": [6, 7],
-    "14_battleIdle": [6],
-    "15_battleLose": [1, 14],
+const animationDefinitions = {
+    1: { name: "idle", frames: [0, 1, 7] },
+    2: { name: "eat", frames: [0, 9, 8] },
+    3: { name: "foodRejectRefuse", frames: [10] },
+    4: { name: "trainReady", frames: [4] },
+    5: { name: "trainFire", frames: [5] },
+    6: { name: "trainSuccessPoopWin", frames: [1, 2] },
+    7: { name: "trainFailTreatment", frames: [6, 3] },
+    8: { name: "sleep", frames: [11, 12] },
+    9: { name: "freeze", frames: [0, 14, 2] },
+    10: { name: "sick", frames: [13, 14] },
+    11: { name: "evolve", frames: [14] },
+    12: { name: "battleStart", frames: [1, 7] },
+    13: { name: "battleAttack", frames: [6, 7] },
+    14: { name: "battleStandby", frames: [6] },
+    15: { name: "battleLose", frames: [1, 14] },
   };
   
-  export default digimonAnimations;
+  export default animationDefinitions;
   
