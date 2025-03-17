@@ -1,90 +1,76 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import digimonData from "../data/digimonData";
 import animationDefinitions from "../data/digimonAnimations";
+import Canvas from "../components/Canvas";
+import DigimonSelector from "../components/DigimonSelector";
+import EvolutionSelector from "../components/EvolutionSelector"; 
+import SizeAdjuster from "../components/SizeAdjuster"; 
+import StatusButtons from "../components/StatusButtons";  // 아이콘 버튼을 관리하는 컴포넌트 추가
 
 const Game = () => {
-  const canvasRef = useRef(null);
-  const spriteImages = useRef({});
   const [selectedDigimon, setSelectedDigimon] = useState("Botamon");
+  const [width, setWidth] = useState(300);  // 초기 가로 크기
+  const [height, setHeight] = useState(200); // 초기 세로 크기
+  const { startNumber } = digimonData[selectedDigimon];
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
+  const idleFrames = animationDefinitions[1].frames.map(
+    (offset) => `${startNumber + offset}.png`
+  );
 
-    const selectedData = digimonData[selectedDigimon];
-    if (!selectedData) {
-      console.error(`No data found for ${selectedDigimon}`);
-      return;
+  // 진화 함수
+  const handleEvolution = (newDigimon) => {
+    if (newDigimon) {
+      setSelectedDigimon(newDigimon);
     }
+  };
 
-    const { startNumber } = selectedData;
+  // 슬라이더 값 변경 핸들러
+  const handleWidthChange = (e) => {
+    setWidth(e.target.value);
+  };
 
-    const imageSources = {
-      background: "/images/162.png", // 배경 고정
-    };
+  const handleHeightChange = (e) => {
+    setHeight(e.target.value);
+  };
 
-    // idle 애니메이션 프레임 계산
-    const idleFrames = animationDefinitions[1].frames.map(
-      (offset) => `${startNumber + offset}.png`
-    );
-
-    // 이미지 경로 준비
-    idleFrames.forEach((fileName, idx) => {
-      imageSources[`idle${idx}`] = `/images/${fileName}`;
-    });
-
-    // 이미지 로드 함수
-    const loadImages = (sources, callback) => {
-      let loadedCount = 0;
-      const totalImages = Object.keys(sources).length;
-
-      Object.keys(sources).forEach((key) => {
-        spriteImages.current[key] = new Image();
-        spriteImages.current[key].src = sources[key];
-        spriteImages.current[key].onload = () => {
-          loadedCount++;
-          if (loadedCount === totalImages) {
-            callback();
-          }
-        };
-      });
-    };
-
-    let frame = 0;
-    const speed = 50; // 속도 조절 (숫자가 클수록 느림)
-
-    const initGame = () => {
-      const animate = () => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(spriteImages.current.background, 0, 0, canvas.width, canvas.height);
-
-        const currentFrameIndex = Math.floor(frame / speed) % idleFrames.length;
-        const currentFrame = spriteImages.current[`idle${currentFrameIndex}`];
-        ctx.drawImage(currentFrame, 100, 80, 80, 80);
-
-        frame++;
-        requestAnimationFrame(animate);
-      };
-
-      animate();
-    };
-
-    loadImages(imageSources, initGame);
-  }, [selectedDigimon]);
+  // 동일한 배율로 width와 height를 변경하는 핸들러
+  const handleAspectRatioChange = (e) => {
+    const newSize = e.target.value;
+    setWidth(newSize);
+    setHeight(newSize);
+  };
 
   return (
     <div>
-      <select
-        value={selectedDigimon}
-        onChange={(e) => setSelectedDigimon(e.target.value)}
-      >
-        {Object.keys(digimonData).map((name) => (
-          <option key={name} value={name}>
-            {name}
-          </option>
-        ))}
-      </select>
-      <canvas ref={canvasRef} width={300} height={200} />
+      <DigimonSelector
+        selectedDigimon={selectedDigimon}
+        setSelectedDigimon={setSelectedDigimon}
+        digimonNames={Object.keys(digimonData)}
+      />
+      
+      <Canvas
+        selectedDigimon={selectedDigimon}
+        startNumber={startNumber}
+        idleFrames={idleFrames}
+        width={width}
+        height={height}
+      />
+      
+      <EvolutionSelector
+        selectedDigimon={selectedDigimon}
+        onEvolve={handleEvolution}
+      />
+      
+      <SizeAdjuster
+        width={width}
+        height={height}
+        onWidthChange={handleWidthChange}
+        onHeightChange={handleHeightChange}
+        onAspectRatioChange={handleAspectRatioChange}
+      />
+
+      {/* 아이콘 버튼을 관리하는 컴포넌트 */}
+      <StatusButtons width={width} height={height} /> {/* 슬라이더 값 전달 */}
     </div>
   );
 };
