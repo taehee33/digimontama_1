@@ -9,6 +9,7 @@ const StatsPanel = ({ stats }) => {
         <p>Weight: {stats.minWeight}</p>
         <p>Hunger Timer: {stats.hungerTimer} min</p>
         <p>Strength Timer: {stats.strengthTimer} min</p>
+        {/* 다른 스탯들도 추가 */}
       </div>
     </div>
   );

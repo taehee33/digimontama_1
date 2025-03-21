@@ -1,3 +1,41 @@
+
+import { initializeStats } from './stats';  // stats.js 임포트
+
+const digimonData = {
+  "Botamon": {
+    startNumber: 210,
+    id: "01-00",
+    stage: "Baby1",
+    attribute: "Free",
+    power: null,
+    version: "Ver.1",
+    stats: initializeStats("Botamon")
+  },
+  "Koromon": {
+    startNumber: 225,
+    id: "01-01",
+    stage: "Baby2",
+    attribute: "Free",
+    power: null,
+    version: "Ver.1",
+    stats: initializeStats("Koromon")
+  },
+  "Agumon": {
+    startNumber: 240,
+    id: "01-02",
+    stage: "Child",
+    attribute: "Vaccine",
+    power: 30,
+    version: "Ver.1",
+    stats: initializeStats("Agumon")
+  },
+  // 나머지 디지몬들도 여기에 추가
+};
+
+export default digimonData;
+
+
+/*
 const digimonData = {
   "Botamon": {
     startNumber: 210, // 여기에 값을 입력하세요
@@ -737,4 +775,6 @@ const digimonData = {
   
 };
 
+
 export default digimonData;
+*/
