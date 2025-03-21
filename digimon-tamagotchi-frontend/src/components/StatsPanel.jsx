@@ -1,16 +1,18 @@
-import React from 'react';
+// StatsPanel.jsx (예시)
+import React from "react";
 
 const StatsPanel = ({ stats }) => {
   return (
-    <div className="p-2 border rounded-xl shadow-md w-48 bg-white">
-      <h2 className="text-lg font-bold mb-2">Stats</h2>
-      <div className="text-sm">
-        <p>Stamina: {stats.maxStamina}</p>
-        <p>Weight: {stats.minWeight}</p>
-        <p>Hunger Timer: {stats.hungerTimer} min</p>
-        <p>Strength Timer: {stats.strengthTimer} min</p>
-        {/* 다른 스탯들도 추가 */}
-      </div>
+    <div className="border p-2 bg-white shadow-md">
+      <p>Age: {stats.age}</p>
+      <p>Weight: {stats.weight}</p>
+      <p>Strength: {stats.strength}</p>
+      <p>Stamina: {stats.stamina}</p>
+      <p>WinRate: {stats.winRate}</p>
+      <p>Effort: {stats.effort}</p>
+      <p>CareMistakes: {stats.careMistakes}</p>
+      <p>Fullness: {stats.fullness}</p>
+      <p>Health: {stats.health}</p>
     </div>
   );
 };

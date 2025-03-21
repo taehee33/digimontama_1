@@ -3,105 +3,91 @@ import digimonData from "../data/digimonData";
 import animationDefinitions from "../data/digimonAnimations";
 import Canvas from "../components/Canvas";
 import DigimonSelector from "../components/DigimonSelector";
-import EvolutionSelector from "../components/EvolutionSelector"; 
+import EvolutionSelector from "../components/EvolutionSelector";
 import MenuIconButtons from "../components/MenuIconButtons";
 import StatsPanel from "../components/StatsPanel";
 import StatsPopup from "../components/StatsPopup";
 import SettingsModal from "../components/SettingsModal";
 import { initializeStats, updateLifespan } from "../data/stats";
-import { evolutionConditions } from "../data/evolutionConditions";  // 진화 조건 임포트
+import { evolutionConditions } from "../data/evolutionConditions";
+import FeedPopup from "../components/FeedPopup";
 
 const Game = () => {
-  // 기본 디지몬 설정
-  const [selectedDigimon, setSelectedDigimon] = useState("Botamon");
-  const { startNumber, stage } = digimonData[selectedDigimon];
+  // 로컬 스토리지에서 이전 데이터 불러오기
+  const savedDigimon = localStorage.getItem('selectedDigimon') || "Botamon";
+  const savedStats = JSON.parse(localStorage.getItem('digimonStats')) || initializeStats(savedDigimon);
+
+  // 기본 디지몬
+  const [selectedDigimon, setSelectedDigimon] = useState(savedDigimon);
+  const { startNumber } = digimonData[selectedDigimon] || {};
 
   // Canvas 사이즈
   const [width, setWidth] = useState(300);
   const [height, setHeight] = useState(200);
 
-  // 스탯 관리
-  const [digimonStats, setDigimonStats] = useState(initializeStats("Botamon"));
+  // 스탯 초기화
+  const [digimonStats, setDigimonStats] = useState(savedStats);
 
-  // 상태 팝업
+  // 상태/메뉴/팝업
   const [showStatsPopup, setShowStatsPopup] = useState(false);
-
-  // 현재 애니메이션
-  const [currentAnimation, setCurrentAnimation] = useState("idle");
-
-  // 메뉴 상태
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [activeMenu, setActiveMenu] = useState(null);
 
-  // 음식 / 먹이주기 상태
-  const foodSprites = [
+  // 먹이 팝업 상태
+  const [showFeedPopup, setShowFeedPopup] = useState(false);
+  const [feedType, setFeedType] = useState(null);
+  const [showFood, setShowFood] = useState(false);
+  const [feedStep, setFeedStep] = useState(0);
+  const [currentFoodIndex, setCurrentFoodIndex] = useState(0);
+
+  // 먹이 스프라이트(고기, 비타민)
+  const meatSprites = [
     "/images/526.png",
     "/images/527.png",
     "/images/528.png",
-    "/images/529.png"
+    "/images/529.png",
   ];
-  const [currentFoodIndex, setCurrentFoodIndex] = useState(0);
-  const [showFood, setShowFood] = useState(false);
-  const [feedStep, setFeedStep] = useState(0);
-  const [foodSizeScale, setFoodSizeScale] = useState(0.31);
+  const vitaminSprites = [
+    "/images/530.png",
+    "/images/531.png",
+    "/images/532.png",
+  ];
 
-  // 개발자 모드
+  // UI/기타
+  const [foodSizeScale, setFoodSizeScale] = useState(0.31);
   const [developerMode, setDeveloperMode] = useState(false);
 
-  // 시간 관련 (추후 구현)
+  // 시간 관련
   const [timeMode, setTimeMode] = useState("KST");
   const [customTime, setCustomTime] = useState(new Date());
   const [timeSpeed, setTimeSpeed] = useState(1);
 
-  // SettingsModal (팝업)
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  // 애니메이션: idle, eat
+  const idleFrames =
+    animationDefinitions[1]?.frames?.map((offset) => `${startNumber + offset}.png`) || [];
+  const eatFrames =
+    animationDefinitions[2]?.frames?.map((offset) => `${startNumber + offset}.png`) || [];
 
-  // 애니메이션 프레임 (idle, eat)
-  const idleFrames = animationDefinitions[1]?.frames?.map(
-    (offset) => `${startNumber + offset}.png`
-  ) || [];
-  const eatFrames = animationDefinitions[2]?.frames?.map(
-    (offset) => `${startNumber + offset}.png`
-  ) || [];
+  const [currentAnimation, setCurrentAnimation] = useState("idle");
 
-  // 진화 함수
+  // 진화 로직
   const handleEvolution = (newDigimon) => {
     if (newDigimon) {
       setSelectedDigimon(newDigimon);
+      const updatedStats = initializeStats(newDigimon);
+      setDigimonStats(updatedStats);
+
+      // 진화 후에도 이전 lifespan 유지
+      updatedStats.lifespanSeconds = digimonStats.lifespanSeconds;
+      localStorage.setItem('digimonStats', JSON.stringify(updatedStats));
     }
   };
 
-  // 먹이주기
-  const handleFeed = () => {
-    setFeedStep(0);
-    setShowFood(true);
-    feedCycle(0);
-  };
-
-  const feedCycle = (step) => {
-    if (step >= 4) {
-      setCurrentAnimation("idle");
-      setShowFood(false);
-      setDigimonStats(prev => ({
-        ...prev,
-        hungerTimer: Math.max(0, prev.hungerTimer - 1),
-        minWeight: prev.minWeight + 1
-      }));
-      return;
-    }
-    setCurrentAnimation("eat");
-    setCurrentFoodIndex(step);
-    setFeedStep(step);
-    setTimeout(() => {
-      feedCycle(step + 1);
-    }, 500);
-  };
-
-  // 진화 조건 체크
   const checkEvolutionCondition = () => {
     const conditions = evolutionConditions[selectedDigimon]?.evolution || [];
     for (let condition of conditions) {
-      if (digimonStats.lifespanMinutes >= condition.condition.lifespanMinutes) {
-        return true;  // 진화 조건 충족
+      if (digimonStats.lifespanSeconds / 60 >= condition.condition.lifespanMinutes) {
+        return true;
       }
     }
     return false;
@@ -109,18 +95,59 @@ const Game = () => {
 
   const handleEvolutionButton = () => {
     if (checkEvolutionCondition() || developerMode) {
-      // 진화 조건을 만족하면 진화 버튼 활성화
-      const nextDigimon = "Koromon"; // 예시: Botamon -> Koromon
+      const nextDigimon = "Koromon"; // 예시
       handleEvolution(nextDigimon);
     }
   };
 
-  // 메뉴 클릭
+  const handleFeed = (type) => {
+    setFeedType(type);
+    setFeedStep(0);
+    setShowFood(true);
+    feedCycle(0, type);
+  };
+
+  const feedCycle = (step, type) => {
+    const maxFrame = type === "vitamin" ? 3 : 4;
+
+    if (step >= maxFrame) {
+      setCurrentAnimation("idle");
+      setShowFood(false);
+
+      setDigimonStats((prev) => {
+        const newWeight = prev.weight + 1;
+        if (type === "meat") {
+          return {
+            ...prev,
+            weight: newWeight,
+            fullness: Math.min(5, prev.fullness + 1),
+          };
+        } else {
+          return {
+            ...prev,
+            weight: newWeight,
+            health: Math.min(5, prev.health + 1),
+          };
+        }
+      });
+
+      return;
+    }
+
+    setCurrentAnimation("eat");
+    setCurrentFoodIndex(step);
+    setFeedStep(step);
+
+    setTimeout(() => {
+      feedCycle(step + 1, type);
+    }, 500);
+  };
+
   const handleMenuClick = (menu) => {
     setActiveMenu(menu);
     switch (menu) {
       case "eat":
-        handleFeed();
+        setShowFeedPopup(true);
         break;
       case "status":
         setShowStatsPopup(true);
@@ -130,35 +157,68 @@ const Game = () => {
     }
   };
 
-  // SettingsModal 열고/닫기
-  const openSettings = () => setShowSettingsModal(true);
-  const closeSettings = () => setShowSettingsModal(false);
-
-  // KST 시간 계산
   const getKSTTime = () => {
-    const now = new Date();
-    const offset = 9 * 60; // KST는 UTC +9
-    const kstTime = new Date(now.getTime() + offset * 60000);
-    return kstTime.toLocaleString(); // 한국 표준시로 포맷팅
+    return new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" });
+  };
+
+  const formatTimeToEvolve = (timeInMinutes) => {
+    const wholeMinutes = Math.floor(timeInMinutes);
+    const fraction = timeInMinutes - wholeMinutes;
+    const seconds = Math.floor(fraction * 60);
+    return `${wholeMinutes} min, ${seconds} sec`;
+  };
+
+  const formatLifespan = (lifeSec) => {
+    const days = Math.floor(lifeSec / 86400);
+    const remainder = lifeSec % 86400;
+    const minutes = Math.floor(remainder / 60);
+    const seconds = remainder % 60;
+    return `${days} day, ${minutes} min, ${seconds} sec`;
   };
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setDigimonStats(prevStats => updateLifespan(prevStats, 1));  // 1분마다 수명 증가
-    }, 60000); // 1분마다 실행
+      setDigimonStats((prevStats) => updateLifespan(prevStats, 1));
+    }, 1000);
 
     const kstTimer = setInterval(() => {
-      setCustomTime(new Date()); // 1초마다 KST 시간을 갱신
-    }, 1000); // 1초마다 KST 시간 갱신
+      setCustomTime(new Date());
+    }, 1000);
 
     return () => {
       clearInterval(timer);
-      clearInterval(kstTimer);  // 컴포넌트가 unmount될 때 타이머 제거
+      clearInterval(kstTimer);
     };
   }, []);
 
+  useEffect(() => {
+    localStorage.setItem('selectedDigimon', selectedDigimon);
+    localStorage.setItem('digimonStats', JSON.stringify(digimonStats));
+  }, [selectedDigimon, digimonStats]);
+
+  // FeedPopup에서 선택한 먹이 종류에 따른 스프라이트 설정
+  let currentFoodSprites = [];
+  if (feedType === "meat") {
+    currentFoodSprites = meatSprites;
+  } else if (feedType === "vitamin") {
+    currentFoodSprites = vitaminSprites;
+  }
+
+  const openSettings = () => setShowSettingsModal(true);
+  const closeSettings = () => setShowSettingsModal(false);
+
+  const resetDigimon = () => {
+    if (window.confirm("정말로 모든 진행 데이터를 초기화하시겠습니까?")) {
+      localStorage.removeItem('selectedDigimon');
+      localStorage.removeItem('digimonStats');
+      setSelectedDigimon("Botamon");
+      setDigimonStats(initializeStats("Botamon"));
+      window.location.reload();
+    }
+  };
+
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center overflow-y-auto max-h-screen p-4">
       {/* 디지몬 선택 */}
       <DigimonSelector
         selectedDigimon={selectedDigimon}
@@ -177,34 +237,40 @@ const Game = () => {
         currentAnimation={currentAnimation}
         showFood={showFood}
         currentFoodIndex={currentFoodIndex}
-        foodSprites={foodSprites}
+        foodSprites={currentFoodSprites}
         developerMode={developerMode}
         feedStep={feedStep}
         foodSizeScale={foodSizeScale}
       />
 
-      {/* 진화 */}
+      {/* 진화 셀렉터 */}
       <EvolutionSelector
         selectedDigimon={selectedDigimon}
         onEvolve={handleEvolution}
       />
 
-      {/* 진화 가능 버튼 */}
+      {/* 진화 버튼 */}
       <button
         onClick={handleEvolutionButton}
         disabled={!checkEvolutionCondition() && !developerMode}
-        className={`mt-4 px-4 py-2 text-white rounded ${checkEvolutionCondition() || developerMode ? 'bg-green-500' : 'bg-gray-500'}`}
+        className={`mt-4 px-4 py-2 text-white rounded ${
+          checkEvolutionCondition() || developerMode ? "bg-green-500" : "bg-gray-500"
+        }`}
       >
         Evolution
       </button>
 
-      {/* 진화까지 남은 시간 표시 */}
+      {/* 진화까지 남은 시간 */}
       <div className="mt-2 text-lg">
-        <p>Time to Evolve: {digimonStats.timeToEvolve} minutes</p>
-        <p>Time to Evolve: {digimonStats.timeToEvolveSeconds} seconds</p>
+        <p>Time to Evolve: {formatTimeToEvolve(digimonStats.timeToEvolve)}</p>
       </div>
 
-      {/* 현재 KST 시간 표시 */}
+      {/* 라이프스팬(day/min/sec) */}
+      <div className="text-lg">
+        <p>Lifespan: {formatLifespan(digimonStats.lifespanSeconds)}</p>
+      </div>
+
+      {/* 현재 KST 시간 */}
       <div className="mt-2 text-lg">
         <p>Current Time (KST): {getKSTTime()}</p>
       </div>
@@ -236,6 +302,17 @@ const Game = () => {
         />
       )}
 
+      {/* (팝업) 먹이 선택 */}
+      {showFeedPopup && (
+        <FeedPopup
+          onClose={() => setShowFeedPopup(false)}
+          onSelect={(type) => {
+            setShowFeedPopup(false);
+            handleFeed(type);
+          }}
+        />
+      )}
+
       {/* Settings 모달 */}
       {showSettingsModal && (
         <SettingsModal
@@ -248,9 +325,9 @@ const Game = () => {
           height={height}
           setWidth={setWidth}
           setHeight={setHeight}
-          backgroundNumber={162}        // 추후 업데이트
+          backgroundNumber={162}
           setBackgroundNumber={() => {}}
-          digimonSizeScale={0.4}        // 추후 업데이트
+          digimonSizeScale={0.4}
           setDigimonSizeScale={() => {}}
           timeMode={timeMode}
           setTimeMode={setTimeMode}
@@ -260,6 +337,14 @@ const Game = () => {
           setCustomTime={setCustomTime}
         />
       )}
+
+      {/* Reset Digimon 버튼 */}
+      <button
+        onClick={resetDigimon}
+        className="px-4 py-2 bg-red-500 text-white rounded mt-4"
+      >
+        Reset Digimon
+      </button>
     </div>
   );
 };

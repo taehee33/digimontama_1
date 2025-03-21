@@ -34,3 +34,4 @@ const StatsPopup = ({ stats, onClose }) => {
 };
 
 export default StatsPopup;
+
