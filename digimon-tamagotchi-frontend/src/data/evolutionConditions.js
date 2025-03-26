@@ -1,11 +1,44 @@
+// src/data/evolutionConditions.js
+
 export const evolutionConditions = {
-    "Botamon": {
+    Digitama: {
       evolution: [
         {
-          digimon: "Koromon",
-          condition: { lifespanMinutes: 10 } // 10분이 지나면 진화 가능
-        }
-      ]
+          next: "Botamon",
+          condition: {
+            check: (stats) => stats.timeToEvolveSeconds <= 0,
+          },
+        },
+      ],
     },
-    // 다른 디지몬에 대한 진화 조건 추가 가능
+    Botamon: {
+      evolution: [
+        {
+          next: "Koromon",
+          condition: {
+            check: (stats) => stats.timeToEvolveSeconds <= 0,
+          },
+        },
+      ],
+    },
+    Koromon: {
+      evolution: [
+        {
+          next: "Agumon",
+          condition: {
+            check: (stats) => stats.timeToEvolveSeconds <= 0 && stats.careMistakes < 4,
+          },
+        },
+        {
+          next: "Betamon",
+          condition: {
+            check: (stats) => stats.timeToEvolveSeconds <= 0 && stats.careMistakes >= 4,
+          },
+        },
+      ],
+    },
+    Agumon: { evolution: [] },
+    Betamon: { evolution: [] },
   };
+  
+  export default evolutionConditions;

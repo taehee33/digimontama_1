@@ -1,4 +1,5 @@
 const digimonStages = [
+    "Digitama",
     "Baby1",
     "Baby2",
     "Child",

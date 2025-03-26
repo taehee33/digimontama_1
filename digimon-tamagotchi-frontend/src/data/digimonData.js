@@ -1,7 +1,15 @@
 
-import { initializeStats } from './stats';  // stats.js 임포트
 
 const digimonData = {
+  Digitama: {
+    // 알 상태
+    startNumber: 133,  // idle 시 133~134
+    stage: "Digitama",
+    weight: 0,
+    fullness: 0,
+    health: 0,
+    timeToEvolve: 10,  // 10분 or 10초? (우리 예시는 초 단위 로직 별도)
+  },
   "Botamon": {
     startNumber: 210,
     id: "01-00",
@@ -9,7 +17,7 @@ const digimonData = {
     attribute: "Free",
     power: null,
     version: "Ver.1",
-    stats: initializeStats("Botamon")
+    //stats: initializeStats("Botamon")
   },
   "Koromon": {
     startNumber: 225,
@@ -18,7 +26,7 @@ const digimonData = {
     attribute: "Free",
     power: null,
     version: "Ver.1",
-    stats: initializeStats("Koromon")
+    //stats: initializeStats("Koromon")
   },
   "Agumon": {
     startNumber: 240,
@@ -27,7 +35,7 @@ const digimonData = {
     attribute: "Vaccine",
     power: 30,
     version: "Ver.1",
-    stats: initializeStats("Agumon")
+   // stats: initializeStats("Agumon")
   },
   // 나머지 디지몬들도 여기에 추가
 };

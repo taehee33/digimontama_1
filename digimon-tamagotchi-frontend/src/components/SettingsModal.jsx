@@ -50,16 +50,6 @@ const SettingsModal = ({
     setLocalDevMode(!localDevMode);
   };
 
-  // Reset functions for each setting
-  const resetWidth = () => setLocalWidth(300);  // Reset to default width
-  const resetHeight = () => setLocalHeight(200);  // Reset to default height
-  const resetUniform = () => {
-    setLocalUniform(Math.min(300, 200));  // Reset to the smaller of the default width and height
-    setLocalWidth(300);  // Reset width to default
-    setLocalHeight(200);  // Reset height to default
-  };
-  const resetDevMode = () => setLocalDevMode(false);  // Reset to default developer mode (off)
-
   // Save
   const handleSave = () => {
     setWidth(localWidth);
@@ -83,9 +73,6 @@ const SettingsModal = ({
           >
             {localDevMode ? "ON" : "OFF"}
           </button>
-          <button onClick={resetDevMode} className="ml-2 px-3 py-1 bg-red-500 text-white rounded">
-            Reset
-          </button>
         </div>
 
         {/* Size Settings */}
@@ -107,9 +94,6 @@ const SettingsModal = ({
               onChange={handleLocalWidthChange}
               className="w-full p-1 border rounded mt-1"
             />
-            <button onClick={resetWidth} className="mt-2 px-3 py-1 bg-red-500 text-white rounded">
-              Reset
-            </button>
           </div>
           <div className="mt-2">
             <label>Height: {localHeight}px</label>
@@ -127,9 +111,6 @@ const SettingsModal = ({
               onChange={handleLocalHeightChange}
               className="w-full p-1 border rounded mt-1"
             />
-            <button onClick={resetHeight} className="mt-2 px-3 py-1 bg-red-500 text-white rounded">
-              Reset
-            </button>
           </div>
           <div className="mt-2">
             <label>Uniform Scale: {localUniform}px</label>
@@ -147,9 +128,6 @@ const SettingsModal = ({
               onChange={handleUniformChange}
               className="w-full p-1 border rounded mt-1"
             />
-            <button onClick={resetUniform} className="mt-2 px-3 py-1 bg-red-500 text-white rounded">
-              Reset
-            </button>
           </div>
         </div>
 
