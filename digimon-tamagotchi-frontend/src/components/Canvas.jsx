@@ -1,157 +1,142 @@
+// src/components/Canvas.jsx
 import { useEffect, useRef } from "react";
-import animationDefinitions from "../data/digimonAnimations";
 
-const Canvas = ({ 
-  selectedDigimon, 
-  startNumber, 
-  idleFrames, 
-  eatFrames, 
-  width = 300, 
-  height = 200,
-  currentAnimation = "idle",
-  showFood,
-  currentFoodIndex,
-  foodSprites,
-  developerMode,
-  feedStep,
-  foodSizeScale
+const Canvas = ({
+  style={},
+  width=300,
+  height=200,
+  backgroundNumber=162,
+  idleFrames=[],
+  eatFrames=[],
+  currentAnimation="idle",
+  showFood=false,
+  feedStep=0,
+  foodSizeScale=0.31,
+  foodSprites=[],
+  developerMode=false
 }) => {
   const canvasRef = useRef(null);
-  const spriteImages = useRef({});
+  const spriteCache = useRef({});
+  const animationID = useRef(null);
 
+  // 이 로직은 deps(여러 props) 변화 시마다 다시 실행 -> 이전 애니 루프 취소 + 새로 로드
   useEffect(() => {
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    canvas.style.imageRendering = "pixelated";
-
-    // 로드할 이미지들
-    const imageSources = {
-      background: "/images/162.png", // 기본 배경 예시
+    if(animationID.current){
+      cancelAnimationFrame(animationID.current);
+      animationID.current= null;
+    }
+    initImages(); // re-init
+    return ()=>{
+      if(animationID.current){
+        cancelAnimationFrame(animationID.current);
+      }
     };
+  },[
+    width, height, idleFrames, eatFrames,
+    currentAnimation, showFood, feedStep,
+    foodSizeScale, foodSprites, developerMode
+  ]);
 
-    // 애니메이션 프레임 (idle vs eat)
-    const frames = (currentAnimation === "eat") ? eatFrames : idleFrames;
-    frames.forEach((fileName, idx) => {
+  function initImages(){
+    const canvas= canvasRef.current;
+    if(!canvas) return;
+    const ctx= canvas.getContext("2d");
+    canvas.style.imageRendering="pixelated";
+
+    // frames
+    const frames = (currentAnimation==="eat")? eatFrames: idleFrames;
+    const imageSources = {};
+
+    frames.forEach((fileName, idx)=>{
       imageSources[`digimon${idx}`] = `/images/${fileName}`;
     });
-
-    // 음식 스프라이트
-    foodSprites.forEach((src, idx) => {
+    foodSprites.forEach((src, idx)=>{
       imageSources[`food${idx}`] = src;
     });
 
-    let loadedCount = 0;
-    const totalImages = Object.keys(imageSources).length;
+    let loadedCount=0;
+    const total= Object.keys(imageSources).length;
 
-    // 모든 이미지 로드
-    Object.keys(imageSources).forEach((key) => {
-      spriteImages.current[key] = new Image();
-      spriteImages.current[key].src = imageSources[key];
-      spriteImages.current[key].onload = () => {
+    Object.keys(imageSources).forEach(key=>{
+      const img = new Image();
+      img.src= imageSources[key];
+      img.onload=()=>{
         loadedCount++;
-        if (loadedCount === totalImages) {
-          initGame();
+        if(loadedCount===total){
+          // start anim
+          startAnimation(ctx, frames);
         }
       };
+      spriteCache.current[key]= img;
     });
+  }
 
-    let frame = 0;
-    const speed = 50;
+  function startAnimation(ctx, frames){
+    let frame=0;
+    const speed=25; // bigger => slower
 
-    // 메인 루프
-    const initGame = () => {
-      const animate = () => {
-        // 화면 초기화
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    function animate(){
+      ctx.clearRect(0,0,width,height);
 
-        // 테두리
-        ctx.strokeStyle = "#000000";
-        ctx.lineWidth = 5;
-        ctx.strokeRect(0, 0, width, height);
+      // (A) 디지몬
+      if(frames.length>0){
+        const frameIndex= Math.floor(frame/speed)% frames.length;
+        const key = `digimon${frameIndex}`;
+        const img = spriteCache.current[key];
+        if(img){
+          const digiW= width*0.4;
+          const digiH= height*0.4;
+          let digiX= (width-digiW)/2;
+          if(currentAnimation==="eat"){
+            digiX= width*0.6 - digiW/2;
+          }
+          ctx.drawImage(img, digiX,(height-digiH)/2, digiW,digiH);
 
-        // 배경
-        ctx.drawImage(spriteImages.current.background, 0, 0, width, height);
-
-        // 디지몬
-        const currentFrameIndex = Math.floor(frame / speed) % frames.length;
-        const currentFrame = spriteImages.current[`digimon${currentFrameIndex}`];
-
-        const digimonWidth = width * 0.4;
-        const digimonHeight = height * 0.4;
-
-        // 먹기 모션 때 디지몬 살짝 오른쪽
-        const digimonX = (currentAnimation === "eat")
-          ? (width * 0.6 - digimonWidth / 2)
-          : (width - digimonWidth) / 2;
-
-        ctx.drawImage(
-          currentFrame,
-          digimonX,
-          (height - digimonHeight) / 2,
-          digimonWidth,
-          digimonHeight
-        );
-
-        // 개발자 모드: 스프라이트 파일명 표시
-        if (developerMode) {
-          ctx.fillStyle = "red";
-          ctx.font = "12px Arial";
-          const spriteName = frames[currentFrameIndex]; // 파일명 (예: "210.png")
-          ctx.fillText(`Sprite: ${spriteName}`, digimonX, (height - digimonHeight) / 2 + digimonHeight + 12);
-        }
-
-        // 음식
-        if (showFood && feedStep < 4) {
-          const foodImage = spriteImages.current[`food${feedStep}`];
-          const foodWidth = width * foodSizeScale;
-          const foodHeight = height * foodSizeScale;
-
-          // 음식 위치 (왼쪽 측)
-          const foodX = (width * 0.2) - (foodWidth / 2);
-          const foodY = (height - foodHeight) / 2;
-
-          ctx.drawImage(foodImage, foodX, foodY, foodWidth, foodHeight);
-
-          // 개발자 모드: 음식 파일명 표시
-          if (developerMode) {
-            ctx.fillStyle = "blue";
-            ctx.font = "12px Arial";
-            ctx.fillText(
-              `Food: ${foodSprites[feedStep]}`,
-              foodX,
-              foodY + foodHeight + 12
-            );
+          if(developerMode){
+            ctx.fillStyle="red";
+            ctx.font="12px sans-serif";
+            ctx.fillText(`Sprite: ${frames[frameIndex]}`, digiX,(height-digiH)/2 + digiH+12);
           }
         }
+      }
 
-        frame++;
-        requestAnimationFrame(animate);
-      };
-      animate();
-    };
+      // (B) 음식
+      if(showFood && feedStep<4){
+        const foodKey= `food${feedStep}`;
+        const foodImg= spriteCache.current[foodKey];
+        if(foodImg){
+          const foodW= width*foodSizeScale;
+          const foodH= height*foodSizeScale;
+          const foodX= width*0.2 - foodW/2;
+          const foodY= (height-foodH)/2;
+          ctx.drawImage(foodImg, foodX,foodY, foodW,foodH);
 
-  }, [
-    selectedDigimon, 
-    startNumber, 
-    idleFrames, 
-    eatFrames, 
-    width, 
-    height,
-    currentAnimation,
-    showFood,
-    currentFoodIndex,
-    foodSprites,
-    developerMode,
-    feedStep,
-    foodSizeScale
-  ]);
+          if(developerMode){
+            ctx.fillStyle="blue";
+            ctx.font="12px sans-serif";
+            ctx.fillText(`Food: ${foodSprites[feedStep]}`, foodX, foodY+foodH+12);
+          }
+        }
+      }
+
+      frame++;
+      animationID.current= requestAnimationFrame(animate);
+    }
+    animate();
+  }
 
   return (
     <canvas
       ref={canvasRef}
       width={width}
       height={height}
-      style={{ border: "1px solid black", margin: "20px" }}
+      style={{
+        backgroundColor:"transparent",
+        position:"absolute",
+        top:0,
+        left:0,
+        ...style
+      }}
     />
   );
 };
