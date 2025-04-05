@@ -1,5 +1,4 @@
 // src/data/evolution_digitalmonstercolor25th_ver1.js
-// Ver.1의 진화조건만 정의(로직 없음)
 
 export const evolutionConditionsVer1 = {
     Digitama: {
@@ -27,24 +26,38 @@ export const evolutionConditionsVer1 = {
         {
           next: "Agumon",
           condition: {
-            check: (stats) =>
-              stats.timeToEvolveSeconds <= 0 && stats.careMistakes < 4,
+            check: (stats) => stats.timeToEvolveSeconds <= 0 && stats.careMistakes < 4,
           },
         },
         {
           next: "Betamon",
           condition: {
-            check: (stats) =>
-              stats.timeToEvolveSeconds <= 0 && stats.careMistakes >= 4,
+            check: (stats) => stats.timeToEvolveSeconds <= 0 && stats.careMistakes >= 4,
           },
         },
       ],
     },
     Agumon: {
-      evolution: [],
+      evolution: [
+        {
+          next: "Greymon",
+          condition: {
+            check: (stats) => stats.timeToEvolveSeconds <= 0 && stats.careMistakes < 4,
+          },
+        },
+        {
+          next: "Betamon",
+          condition: {
+            check: (stats) => stats.timeToEvolveSeconds <= 0 && stats.careMistakes >= 4,
+          },
+        },
+      ],
     },
     Betamon: {
       evolution: [],
     },
-    // 필요시 추가...
+    Greymon: {
+      evolution: [],
+    },
+    // ...
   };

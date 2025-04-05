@@ -1,56 +1,34 @@
 // src/data/stats.js
-// - 로직(초기화, updateLifespan, etc.)
-// - digimonDataVer1를 import하여 merge
-// - 오버피드, health=5 clamp, hunger=0->12h 사망
+import { defaultStats } from "./defaultStatsFile"; 
+// 혹은 아래 defaultStats를 이 파일 내에 직접 정의해도 됨
 
-import { digimonDataVer1 } from "./digimondata_digitalmonstercolor25th_ver1";
+export function initializeStats(digiName, oldStats={}, dataMap={}){
+  if(!dataMap[digiName]){
+    console.error(`initializeStats: [${digiName}] not found in dataMap!`);
+    // fallback: Digitama? or just return oldStats?
+    // 여기서는 Digitama로 fallback 예시
+    digiName= "Digitama";
+  }
+  const custom = dataMap[digiName] || {};
+  
+  let merged= { ...defaultStats, ...custom };
 
-const defaultStats = {
-  // 공통 기본
-  sprite: 133,
-  evolutionStage: "Digitama",
-  lifespanSeconds: 0,
-  timeToEvolveSeconds: 0,
+  // 기존 age, weight, lifespanSeconds 이어받기
+  merged.age = oldStats.age || merged.age;
+  merged.weight = oldStats.weight || merged.weight;
+  merged.lifespanSeconds= oldStats.lifespanSeconds || merged.lifespanSeconds;
 
-  hungerTimer: 0,
-  strengthTimer: 0,
-  poopTimer: 0,
-  hungerCountdown: 0,
-  strengthCountdown: 0,
-
-  age: 0,
-  weight: 0,
-  strength: 0,
-  fullness: 0,   // 0..(5+maxOverfeed)
-  health: 0,     // 0..5
-  isDead: false,
-  lastHungerZeroAt: null,
-  maxOverfeed: 0,
-  // etc. minWeight, maxStamina...
-};
-
-/** initializeStats(digiName) */
-export function initializeStats(digiName){
-  // 해당 Ver.1 데이터
-  const data= digimonDataVer1[digiName] || {};
-  const merged= { ...defaultStats, ...data };
-
-  // timer countdown
-  merged.hungerCountdown= merged.hungerTimer*60;
+  merged.hungerCountdown= merged.hungerTimer * 60;
   merged.strengthCountdown= merged.strengthTimer*60;
+
   return merged;
 }
 
-/** updateLifespan(stats, deltaSec) */
-export function updateLifespan(stats, deltaSec){
+export function updateLifespan(stats, deltaSec=1){
   if(stats.isDead) return stats;
 
   const s= { ...stats };
-
-  // 수명
   s.lifespanSeconds += deltaSec;
-
-  // 진화 타이머
   s.timeToEvolveSeconds= Math.max(0, s.timeToEvolveSeconds - deltaSec);
 
   // fullness--
@@ -60,13 +38,11 @@ export function updateLifespan(stats, deltaSec){
       s.fullness= Math.max(0, s.fullness-1);
       s.hungerCountdown= s.hungerTimer*60;
 
-      // hunger=0 => record time
       if(s.fullness===0 && !s.lastHungerZeroAt){
         s.lastHungerZeroAt= Date.now();
       }
     }
   }
-
   // health--
   if(s.strengthTimer>0){
     s.strengthCountdown -= deltaSec;
@@ -75,8 +51,7 @@ export function updateLifespan(stats, deltaSec){
       s.strengthCountdown= s.strengthTimer*60;
     }
   }
-
-  // hunger=0 => 12h later => isDead
+  // hunger=0 => 12h->사망
   if(s.fullness>0){
     s.lastHungerZeroAt= null;
   } else if(s.fullness===0 && s.lastHungerZeroAt){
@@ -88,7 +63,6 @@ export function updateLifespan(stats, deltaSec){
   return s;
 }
 
-/** updateAge => 자정마다 age++ */
 export function updateAge(stats){
   const now= new Date();
   if(now.getHours()===0 && now.getMinutes()===0){
