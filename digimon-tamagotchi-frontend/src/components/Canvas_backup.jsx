@@ -5,11 +5,11 @@ const Canvas = ({
   style={},
   width=300,
   height=200,
-  // frames
+  // animation frames
   idleFrames=[],
   eatFrames=[],
-  foodRejectFrames=[],
-  currentAnimation="idle",
+  overfeedFrames=[],
+  currentAnimation="idle", 
   showFood=false,
   feedStep=0,
   foodSizeScale=0.31,
@@ -21,6 +21,7 @@ const Canvas = ({
   const animationID= useRef(null);
 
   useEffect(()=>{
+    // clean up old anim
     if(animationID.current){
       cancelAnimationFrame(animationID.current);
       animationID.current= null;
@@ -33,7 +34,7 @@ const Canvas = ({
     };
   },[
     width,height,
-    idleFrames,eatFrames,foodRejectFrames,
+    idleFrames,eatFrames,overfeedFrames,
     currentAnimation,showFood,feedStep,
     foodSizeScale,foodSprites,developerMode
   ]);
@@ -44,29 +45,31 @@ const Canvas = ({
     const ctx= canvas.getContext("2d");
     canvas.style.imageRendering= "pixelated";
 
+    // frames 결정
     let frames=[];
     if(currentAnimation==="eat"){
       frames= eatFrames;
-    } else if(currentAnimation==="foodRejectRefuse"){
-      frames= foodRejectFrames.length>0 ? foodRejectFrames : ["14"];
+    } else if(currentAnimation==="overfeed"){
+      frames= overfeedFrames.length>0? overfeedFrames: eatFrames; 
     } else {
       frames= idleFrames;
     }
+    if(!frames||frames.length===0) frames=["210.png"];
 
-    if(!frames || frames.length===0) frames=["210"];
-
-    const imageSources={};
-    frames.forEach((fn,idx)=>{
-      imageSources[`digimon${idx}`] = `/images/${fn}.png`;
+    // 로드할 이미지
+    const imageSources= {};
+    frames.forEach((fileName, idx)=>{
+      imageSources[`digimon${idx}`]= `/images/${fileName}`;
     });
-    // food
+    // 음식
     foodSprites.forEach((src,idx)=>{
-      imageSources[`food${idx}`] = src;
+      imageSources[`food${idx}`]= src;
     });
 
-    let loaded=0;
+    let loadedCount=0;
     const total= Object.keys(imageSources).length;
     if(total===0){
+      // no images => 그냥 start anim
       startAnimation(ctx, frames);
       return;
     }
@@ -75,19 +78,12 @@ const Canvas = ({
       const img= new Image();
       img.src= imageSources[key];
       img.onload= ()=>{
-        loaded++;
-        if(loaded=== total){
+        loadedCount++;
+        if(loadedCount===total){
           startAnimation(ctx, frames);
         }
       };
-      img.onerror= ()=>{
-        console.warn("Fail to load:", imageSources[key]);
-        loaded++;
-        if(loaded=== total){
-          startAnimation(ctx, frames);
-        }
-      };
-      spriteCache.current[key] = img;
+      spriteCache.current[key]= img;
     });
   }
 
@@ -100,42 +96,43 @@ const Canvas = ({
 
       // 디지몬
       if(frames.length>0){
-        const idx= Math.floor(frame/speed)% frames.length;
-        const name= frames[idx];
-        const key= `digimon${idx}`;
-        const digimonImg= spriteCache.current[key];
-        if(digimonImg && digimonImg.naturalWidth>0){
+        const frameIndex= Math.floor(frame/speed)% frames.length;
+        const digimonKey= `digimon${frameIndex}`;
+        const digimonImg= spriteCache.current[digimonKey];
+        if(digimonImg){
           const digiW= width*0.4;
           const digiH= height*0.4;
           let digiX= (width-digiW)/2;
-
           if(currentAnimation==="eat"){
             digiX= width*0.6 - digiW/2;
-          } else if(currentAnimation==="foodRejectRefuse"){
-            // shift if needed
+          } else if(currentAnimation==="overfeed"){
+            // 위치 같아도 됨
+            // digiX= ...;
           }
-          ctx.drawImage(digimonImg,digiX,(height-digiH)/2,digiW,digiH);
+          ctx.drawImage(digimonImg, digiX,(height-digiH)/2,digiW,digiH);
 
           if(developerMode){
             ctx.fillStyle="red";
             ctx.font="12px sans-serif";
-            ctx.fillText(`Sprite: ${name}.png`, digiX,(height-digiH)/2 + digiH+12);
+            ctx.fillText(`Sprite: ${frames[frameIndex]}`, digiX,(height-digiH)/2+digiH+12);
           }
         }
       }
 
       // 음식
       if(showFood && feedStep< foodSprites.length){
-        const fKey= `food${feedStep}`;
-        const fImg= spriteCache.current[fKey];
-        if(fImg && fImg.naturalWidth>0){
-          const fw= width*foodSizeScale, fh= height*foodSizeScale;
-          const fx= width*0.2 - fw/2, fy= (height-fh)/2;
-          ctx.drawImage(fImg, fx,fy,fw,fh);
+        const foodKey= `food${feedStep}`;
+        const foodImg= spriteCache.current[foodKey];
+        if(foodImg){
+          const foodW= width*foodSizeScale;
+          const foodH= height*foodSizeScale;
+          const foodX= width*0.2 - foodW/2;
+          const foodY= (height-foodH)/2;
+          ctx.drawImage(foodImg, foodX,foodY,foodW,foodH);
 
           if(developerMode){
             ctx.fillStyle="blue";
-            ctx.fillText(`Food: ${foodSprites[feedStep]}`, fx, fy+fh+12);
+            ctx.fillText(`Food: ${foodSprites[feedStep]}`, foodX, foodY+foodH+12);
           }
         }
       }
