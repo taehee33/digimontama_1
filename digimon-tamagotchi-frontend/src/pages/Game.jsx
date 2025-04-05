@@ -14,6 +14,11 @@ import { initializeStats, updateLifespan, updateAge } from "../data/stats";
 import { digimonDataVer1 } from "../data/digimondata_digitalmonstercolor25th_ver1";
 import { evolutionConditionsVer1 } from "../data/evolution_digitalmonstercolor25th_ver1";
 
+// ★ (A) 훈련 로직 (Ver1) import
+import { doVer1Training } from "../data/train_digitalmonstercolor25th_ver1";
+import TrainPopup from "../components/TrainPopup"; 
+
+// 예시: Ver1 디지몬 목록
 const ver1DigimonList = [
   "Digitama",
   "Botamon",
@@ -27,6 +32,7 @@ const ver1DigimonList = [
 
 const perfectStages = ["Perfect","Ultimate","SuperUltimate"];
 
+// 시간 포맷
 function formatTimeToEvolve(sec=0){
   const m = Math.floor(sec/60);
   const s = sec % 60;
@@ -34,102 +40,104 @@ function formatTimeToEvolve(sec=0){
 }
 function formatLifespan(sec=0){
   const d = Math.floor(sec/86400);
-  const r = sec % 86400;
+  const r = sec %86400;
   const mm= Math.floor(r/60);
-  const ss= r % 60;
+  const ss= r%60;
   return `${d} day, ${mm} min, ${ss} sec`;
 }
 
 function Game(){
   const { slotId } = useParams();
-  const navigate   = useNavigate();
+  const navigate= useNavigate();
 
-  const [selectedDigimon, setSelectedDigimon] = useState("Digitama");
-  const [digimonStats, setDigimonStats] = useState(
+  const [selectedDigimon, setSelectedDigimon]= useState("Digitama");
+  const [digimonStats, setDigimonStats]= useState(
     initializeStats("Digitama", {}, digimonDataVer1)
   );
 
-  // 사망확인 팝업
-  const [showDeathConfirm, setShowDeathConfirm] = useState(false);
+  // 사망확인
+  const [showDeathConfirm, setShowDeathConfirm]= useState(false);
 
   // 슬롯 정보
-  const [slotName, setSlotName] = useState("");
-  const [slotCreatedAt, setSlotCreatedAt] = useState("");
-  const [slotDevice, setSlotDevice] = useState("");
-  const [slotVersion, setSlotVersion] = useState("");
+  const [slotName, setSlotName]= useState("");
+  const [slotCreatedAt, setSlotCreatedAt]= useState("");
+  const [slotDevice, setSlotDevice]= useState("");
+  const [slotVersion, setSlotVersion]= useState("");
 
   // Canvas/UI
-  const [width, setWidth] = useState(300);
-  const [height, setHeight] = useState(200);
-  const [backgroundNumber, setBackgroundNumber] = useState(162);
-  const [currentAnimation, setCurrentAnimation] = useState("idle");
+  const [width, setWidth]= useState(300);
+  const [height, setHeight]= useState(200);
+  const [backgroundNumber, setBackgroundNumber]= useState(162);
+  const [currentAnimation, setCurrentAnimation]= useState("idle");
 
-  // Popups
-  const [showStatsPopup, setShowStatsPopup] = useState(false);
-  const [showFeedPopup, setShowFeedPopup]   = useState(false);
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [activeMenu, setActiveMenu] = useState(null);
+  // 팝업
+  const [showStatsPopup, setShowStatsPopup]= useState(false);
+  const [showFeedPopup, setShowFeedPopup]= useState(false);
+  const [showSettingsModal, setShowSettingsModal]= useState(false);
+  const [activeMenu, setActiveMenu]= useState(null);
 
-  // Dev Mode
-  const [developerMode, setDeveloperMode] = useState(false);
+  const [developerMode, setDeveloperMode]= useState(false);
 
-  // Time
-  const [customTime, setCustomTime] = useState(new Date());
-  const [timeSpeed, setTimeSpeed]    = useState(1);
+  // 시간
+  const [customTime, setCustomTime]= useState(new Date());
+  const [timeSpeed, setTimeSpeed]= useState(1);
 
-  // Feed
-  const [feedType, setFeedType] = useState(null);
-  const [showFood, setShowFood] = useState(false);
-  const [feedStep, setFeedStep] = useState(0);
-  const [foodSizeScale, setFoodSizeScale] = useState(0.31);
+  // feed
+  const [feedType, setFeedType]= useState(null);
+  const [showFood, setShowFood]= useState(false);
+  const [feedStep, setFeedStep]= useState(0);
+  const [foodSizeScale, setFoodSizeScale]= useState(0.31);
 
-  const meatSprites    = ["/images/526.png","/images/527.png","/images/528.png","/images/529.png"];
-  const proteinSprites = ["/images/530.png","/images/531.png","/images/532.png"];
+  const meatSprites= ["/images/526.png","/images/527.png","/images/528.png","/images/529.png"];
+  const proteinSprites= ["/images/530.png","/images/531.png","/images/532.png"];
 
-  // (A) LOAD SLOT
+  // (A) 청소 애니
+  const [showPoopCleanAnimation, setShowPoopCleanAnimation]= useState(false);
+  const [cleanStep, setCleanStep]= useState(0);
+
+  // ★ (B) 훈련 팝업
+  const [showTrainPopup, setShowTrainPopup]= useState(false);
+
+  // (1) SLOT LOAD
   useEffect(()=>{
     if(!slotId) return;
-    const sName     = localStorage.getItem(`slot${slotId}_slotName`)      || `슬롯${slotId}`;
-    const sCreated  = localStorage.getItem(`slot${slotId}_createdAt`)     || "";
-    const sDev      = localStorage.getItem(`slot${slotId}_device`)        || "";
-    const sVer      = localStorage.getItem(`slot${slotId}_version`)       || "Ver.1";
+    const sName= localStorage.getItem(`slot${slotId}_slotName`) || `슬롯${slotId}`;
+    const sCreated= localStorage.getItem(`slot${slotId}_createdAt`) || "";
+    const sDev= localStorage.getItem(`slot${slotId}_device`) || "";
+    const sVer= localStorage.getItem(`slot${slotId}_version`) || "Ver.1";
 
     setSlotName(sName);
     setSlotCreatedAt(sCreated);
     setSlotDevice(sDev);
     setSlotVersion(sVer);
 
-    // 저장된 디지몬 이름 + stats
-    const savedName = localStorage.getItem(`slot${slotId}_selectedDigimon`) || "Digitama";
-    const savedStatsStr = localStorage.getItem(`slot${slotId}_digimonStats`);
+    const savedName= localStorage.getItem(`slot${slotId}_selectedDigimon`)|| "Digitama";
+    const savedStatsStr= localStorage.getItem(`slot${slotId}_digimonStats`);
     if(savedStatsStr){
       const parsed= JSON.parse(savedStatsStr);
-      if(Object.keys(parsed).length === 0){
-        // Digitama 초기화
-        const ns = initializeStats("Digitama", {}, digimonDataVer1);
+      if(Object.keys(parsed).length===0){
+        const ns= initializeStats("Digitama", {}, digimonDataVer1);
         setSelectedDigimon("Digitama");
         setDigimonStats(ns);
       } else {
-        // load saved
         setSelectedDigimon(savedName);
         setDigimonStats(parsed);
       }
     } else {
-      // 없는 경우 Digitama
       const ns= initializeStats("Digitama", {}, digimonDataVer1);
       setSelectedDigimon("Digitama");
       setDigimonStats(ns);
     }
-  }, [slotId]);
+  },[slotId]);
 
-  // (B) 매초 => updateLifespan + updateAge
+  // (2) 매초 => updateLifespan+updateAge
   useEffect(()=>{
-    const timer = setInterval(()=>{
+    const timer= setInterval(()=>{
       setDigimonStats(prev=>{
-        let s = { ...prev };
+        let s={...prev};
         if(!s.isDead){
-          s = updateLifespan(s, 1);
-          s = updateAge(s);  // 자정이면 age++
+          s= updateLifespan(s,1);
+          s= updateAge(s);
           if(!prev.isDead && s.isDead){
             setShowDeathConfirm(true);
           }
@@ -139,19 +147,16 @@ function Game(){
         }
         return s;
       });
-    }, 1000);
+    },1000);
 
-    const clockT= setInterval(()=> {
-      setCustomTime(new Date());
-    }, 1000);
+    const clock= setInterval(()=> setCustomTime(new Date()),1000);
 
     return ()=>{
       clearInterval(timer);
-      clearInterval(clockT);
+      clearInterval(clock);
     };
-  }, [slotId]);
+  },[slotId]);
 
-  /** Stats 저장 */
   function setDigimonStatsAndSave(newStats){
     setDigimonStats(newStats);
     if(slotId){
@@ -165,28 +170,27 @@ function Game(){
     }
   }
 
-  // Animation frames
+  // 애니메이션
   let idleAnimId=1, eatAnimId=2, rejectAnimId=3;
   if(selectedDigimon==="Digitama") idleAnimId=90;
-  const idleOff    = digimonAnimations[idleAnimId]?.frames || [0];
-  const eatOff     = digimonAnimations[eatAnimId]?.frames || [0];
-  const rejectOff  = digimonAnimations[rejectAnimId]?.frames|| [14];
+  const idleOff= digimonAnimations[idleAnimId]?.frames||[0];
+  const eatOff= digimonAnimations[eatAnimId]?.frames||[0];
+  const rejectOff= digimonAnimations[rejectAnimId]?.frames||[14];
 
-  let idleFrames       = idleOff.map(n => `${digimonStats.sprite + n}`);
-  let eatFramesArr     = eatOff.map(n => `${digimonStats.sprite + n}`);
-  let rejectFramesArr  = rejectOff.map(n=> `${digimonStats.sprite + n}`);
+  let idleFrames= idleOff.map(n=> `${digimonStats.sprite + n}`);
+  let eatFramesArr= eatOff.map(n=> `${digimonStats.sprite + n}`);
+  let rejectFramesArr= rejectOff.map(n=> `${digimonStats.sprite + n}`);
 
-  // 사망 => sprite+15
   if(digimonStats.isDead){
-    idleFrames       = [ `${digimonStats.sprite + 15}` ];
-    eatFramesArr     = [ `${digimonStats.sprite + 15}` ];
-    rejectFramesArr  = [ `${digimonStats.sprite + 15}` ];
+    idleFrames= [ `${digimonStats.sprite+15}` ];
+    eatFramesArr= [ `${digimonStats.sprite+15}` ];
+    rejectFramesArr= [ `${digimonStats.sprite+15}` ];
   }
 
-  // Evolution
+  // 진화
   function canEvolve(){
     if(digimonStats.isDead) return false;
-    if(developerMode) return true;  // devMode => always evolve
+    if(developerMode) return true;
     const evo= evolutionConditionsVer1[selectedDigimon];
     if(!evo) return false;
     for(let e of evo.evolution){
@@ -201,7 +205,7 @@ function Game(){
     const evo= evolutionConditionsVer1[selectedDigimon];
     if(!evo) return;
     for(let e of evo.evolution){
-      let test= { ...digimonStats };
+      let test={...digimonStats};
       if(developerMode){
         test.timeToEvolveSeconds=0;
       }
@@ -212,54 +216,46 @@ function Game(){
     }
   }
   function handleEvolution(newName){
-    const old= { ...digimonStats };
-    // dataMap => digimonDataVer1
-    // 오타 방지: if(!digimonDataVer1[newName]) => fallback
-    // 여기서는 예시로 fallback은 Digitama
     if(!digimonDataVer1[newName]){
       console.error(`No data for ${newName} in digimonDataVer1! fallback => Digitama`);
-      newName= "Digitama";
+      newName="Digitama";
     }
+    const old={...digimonStats};
     const nx= initializeStats(newName, old, digimonDataVer1);
     setDigimonStatsAndSave(nx);
     setSelectedDigimonAndSave(newName);
   }
 
-  // 사망확인 => Ohakadamon
   function handleDeathConfirm(){
     let ohaka="Ohakadamon1";
     if(perfectStages.includes(digimonStats.evolutionStage)){
       ohaka="Ohakadamon2";
     }
-    const old= { ...digimonStats };
     if(!digimonDataVer1[ohaka]){
       console.error(`No data for ${ohaka} in digimonDataVer1!? fallback => Digitama`);
-      ohaka= "Digitama";
+      ohaka="Digitama";
     }
+    const old= {...digimonStats};
     const nx= initializeStats(ohaka, old, digimonDataVer1);
     setDigimonStatsAndSave(nx);
     setSelectedDigimonAndSave(ohaka);
     setShowDeathConfirm(false);
   }
 
-  // Feed
+  // 먹이
   function handleFeed(type){
-    if(digimonStats.isDead){
-      console.log("사망 => cannot feed");
-      return;
-    }
-    const limit= 5 + (digimonStats.maxOverfeed || 0);
+    if(digimonStats.isDead) return;
+    const limit= 5+(digimonStats.maxOverfeed||0);
     if(type==="meat"){
-      if(digimonStats.fullness >= limit){
+      if(digimonStats.fullness>= limit){
         setCurrentAnimation("foodRejectRefuse");
         setShowFood(false);
         setFeedStep(0);
-        setTimeout(()=> setCurrentAnimation("idle"), 2000);
+        setTimeout(()=> setCurrentAnimation("idle"),2000);
         return;
       }
     } else {
-      // protein => fullness≥limit && health≥5 => reject
-      if(digimonStats.fullness>= limit && digimonStats.health>=5){
+      if(digimonStats.fullness>=limit && digimonStats.health>=5){
         setCurrentAnimation("foodRejectRefuse");
         setShowFood(false);
         setFeedStep(0);
@@ -272,9 +268,9 @@ function Game(){
     setFeedStep(0);
     eatCycle(0, type);
   }
-  function eatCycle(step, type){
-    const frameCount= (type==="protein" ? 3 : 4);
-    if(step>= frameCount){
+  function eatCycle(step,type){
+    const frameCount= (type==="protein"?3:4);
+    if(step>=frameCount){
       setCurrentAnimation("idle");
       setShowFood(false);
       setDigimonStatsAndSave(applyEatResult(digimonStats, type));
@@ -282,19 +278,17 @@ function Game(){
     }
     setCurrentAnimation("eat");
     setFeedStep(step);
-    setTimeout(()=> eatCycle(step+1, type), 500);
+    setTimeout(()=> eatCycle(step+1,type),500);
   }
-  function applyEatResult(old, type){
-    let s= { ...old };
-    const limit= 5 + (s.maxOverfeed||0);
+  function applyEatResult(old,type){
+    let s={...old};
+    const limit=5+(s.maxOverfeed||0);
     if(type==="meat"){
-      // fullness++
-      if(s.fullness< limit){
+      if(s.fullness<limit){
         s.fullness++;
         s.weight++;
       }
     } else {
-      // protein
       if(s.fullness<5){
         s.fullness= Math.min(limit, s.fullness+2);
       }
@@ -306,24 +300,55 @@ function Game(){
     return s;
   }
 
-  // Reset
+  // 똥 청소
+  function handleCleanPoop(){
+    if(digimonStats.poopCount<=0){
+      return;
+    }
+    setShowPoopCleanAnimation(true);
+    setCleanStep(0);
+    cleanCycle(0);
+  }
+  function cleanCycle(step){
+    if(step>3){
+      setShowPoopCleanAnimation(false);
+      setCleanStep(0);
+      setDigimonStats(prev => ({
+        ...prev,
+        poopCount:0,
+        lastMaxPoopTime:null
+      }));
+      return;
+    }
+    setCleanStep(step);
+    setTimeout(()=> cleanCycle(step+1), 400);
+  }
+
+  // ★ (C) 훈련
+  function handleTrainResult(userSelections){
+    // userSelections: 길이5의 "U"/"D" 배열
+    // doVer1Training -> stats 업데이트
+    const result= doVer1Training(digimonStats, userSelections);
+    setDigimonStatsAndSave(result.updatedStats);
+    // 그냥 콘솔
+    console.log("훈련 결과:", result);
+  }
+
+  // 리셋
   function resetDigimon(){
     if(!window.confirm("정말로 초기화?")) return;
     if(slotId){
       localStorage.removeItem(`slot${slotId}_selectedDigimon`);
       localStorage.removeItem(`slot${slotId}_digimonStats`);
     }
-    // fallback => Digitama
     const ns= initializeStats("Digitama", {}, digimonDataVer1);
     setDigimonStatsAndSave(ns);
     setSelectedDigimonAndSave("Digitama");
     setShowDeathConfirm(false);
   }
 
-  const goSelect= ()=> navigate("/select");
-
-  // Evolution 버튼 상태
-  let isEvoEnabled = false;
+  // evo 버튼
+  let isEvoEnabled=false;
   if(!digimonStats.isDead){
     if(developerMode) isEvoEnabled= true;
     else {
@@ -339,6 +364,28 @@ function Game(){
     }
   }
 
+  // 메뉴 클릭 (train 버튼 시)
+  const handleMenuClick = (menu)=>{
+    setActiveMenu(menu);
+    switch(menu){
+      case "eat":
+        setShowFeedPopup(true);
+        break;
+      case "status":
+        setShowStatsPopup(true);
+        break;
+      case "bathroom":
+        handleCleanPoop();
+        break;
+      case "train":
+        setShowTrainPopup(true);
+        break;
+      default:
+        console.log("menu:", menu);
+    }
+  };
+
+  // 화면 렌더
   return (
     <div className="flex flex-col items-center min-h-screen p-4 bg-gray-200">
       <h2 className="text-lg font-bold mb-2">
@@ -348,27 +395,24 @@ function Game(){
       <p>생성일: {slotCreatedAt}</p>
       <p>기종: {slotDevice} / 버전: {slotVersion}</p>
 
-      <button onClick={goSelect} className="mb-2 px-3 py-1 bg-gray-400 text-white rounded">
+      <button onClick={()=> navigate("/select")} className="mb-2 px-3 py-1 bg-gray-400 text-white rounded">
         ← Select 화면
       </button>
 
-      {/* Canvas 영역 */}
-      <div style={{position:"relative", width, height, border:"2px solid #555"}}>
+      <div style={{position:"relative", width,height, border:"2px solid #555"}}>
         <img
           src={`/images/${backgroundNumber}.png`}
           alt="bg"
           style={{
             position:"absolute",
-            top:0,
-            left:0,
-            width:"100%",
-            height:"100%",
+            top:0,left:0,
+            width:"100%",height:"100%",
             imageRendering:"pixelated",
-            zIndex:1,
+            zIndex:1
           }}
         />
         <Canvas
-          style={{ position:"absolute", top:0, left:0, zIndex:2 }}
+          style={{ position:"absolute", top:0,left:0, zIndex:2 }}
           width={width}
           height={height}
           currentAnimation={currentAnimation}
@@ -380,10 +424,12 @@ function Game(){
           foodSizeScale={foodSizeScale}
           developerMode={developerMode}
           foodSprites={(feedType==="protein")? proteinSprites: meatSprites}
+          poopCount={digimonStats.poopCount || 0}
+          showPoopCleanAnimation={showPoopCleanAnimation}
+          cleanStep={cleanStep}
         />
       </div>
 
-      {/* 진화 버튼 */}
       <button
         onClick={handleEvolutionButton}
         disabled={!isEvoEnabled}
@@ -392,7 +438,6 @@ function Game(){
         Evolution
       </button>
 
-      {/* 사망 확인 */}
       {showDeathConfirm && (
         <div className="mt-4 bg-red-100 p-2 rounded">
           <p className="text-red-600 font-bold">디지몬이 사망했습니다! 사망 확인?</p>
@@ -411,25 +456,16 @@ function Game(){
         <p>Current Time: {customTime.toLocaleString()}</p>
       </div>
 
-      {/* StatsPanel & 메뉴 */}
       <div className="flex space-x-4 mt-4">
         <StatsPanel stats={digimonStats} />
         <MenuIconButtons
           width={width}
           height={height}
           activeMenu={activeMenu}
-          onMenuClick={(menu)=>{
-            setActiveMenu(menu);
-            if(menu==="eat"){
-              setShowFeedPopup(true);
-            } else if(menu==="status"){
-              setShowStatsPopup(true);
-            }
-          }}
+          onMenuClick={handleMenuClick}
         />
       </div>
 
-      {/* Settings 버튼 */}
       <button
         onClick={()=> setShowSettingsModal(true)}
         className="px-4 py-2 bg-yellow-500 text-white rounded mt-4"
@@ -437,7 +473,6 @@ function Game(){
         Settings
       </button>
 
-      {/* Stats Popup */}
       {showStatsPopup && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
           <StatsPopup
@@ -449,7 +484,6 @@ function Game(){
         </div>
       )}
 
-      {/* Feed Popup */}
       {showFeedPopup && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
           <FeedPopup
@@ -462,7 +496,6 @@ function Game(){
         </div>
       )}
 
-      {/* Settings Modal */}
       {showSettingsModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
           <SettingsModal
@@ -485,7 +518,6 @@ function Game(){
         </div>
       )}
 
-      {/* Reset */}
       <button
         onClick={resetDigimon}
         className="px-4 py-2 bg-red-500 text-white rounded mt-4"
@@ -493,16 +525,14 @@ function Game(){
         Reset Digimon
       </button>
 
-      {/* Dev Mode => 디지몬 선택 */}
       {developerMode && slotVersion==="Ver.1" && (
         <div className="mt-2 p-2 border">
           <label className="mr-1">Dev Digimon Select:</label>
           <select
             onChange={(e)=>{
               const nm= e.target.value;
-              // dataMap check
               if(!digimonDataVer1[nm]){
-                console.error(`No data for ${nm} in digimonDataVer1! fallback => Digitama`);
+                console.error(`No data for ${nm}`);
                 const fallback= initializeStats("Digitama", digimonStats, digimonDataVer1);
                 setDigimonStatsAndSave(fallback);
                 setSelectedDigimonAndSave("Digitama");
@@ -515,11 +545,21 @@ function Game(){
             }}
             defaultValue={selectedDigimon}
           >
-            {ver1DigimonList.map(d => (
+            {ver1DigimonList.map(d=>(
               <option key={d} value={d}>{d}</option>
             ))}
           </select>
         </div>
+      )}
+
+      {/* ★ (D) 훈련 팝업 */}
+      {showTrainPopup && (
+        <TrainPopup
+          onClose={()=> setShowTrainPopup(false)}
+          digimonStats={digimonStats}
+          setDigimonStatsAndSave={setDigimonStatsAndSave}
+          onTrainResult={handleTrainResult}
+        />
       )}
     </div>
   );

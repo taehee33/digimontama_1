@@ -27,29 +27,53 @@ function fullnessDisplay(fullness=0, maxOverfeed=0){
   return `${base}${over>0 ? "(+" + over + ")" : ""}`;
 }
 
+// timestamp -> 'YYYY.MM.DD HH:mm:ss' 식 변환
+function formatTimestamp(ts){
+  if(!ts) return "N/A";
+  return new Date(ts).toLocaleString(); 
+}
+
 export default function StatsPopup({
   stats,
   onClose,
   devMode=false,
   onChangeStats
 }){
+  // stats 내부 항목 구조 분해
   const {
     fullness, maxOverfeed, timeToEvolveSeconds, lifespanSeconds,
     age, sprite, evolutionStage, weight, health, isDead,
     hungerTimer, strengthTimer, poopTimer,
     maxStamina, minWeight, healing, attribute, power,
     attackSprite, altAttackSprite, careMistakes,
-    strength, stamina, effort, winRate
+    strength, stamina, effort, winRate,
+    poopCount=0,
+    lastMaxPoopTime,
+    trainingCount=0
   } = stats || {};
 
-  // devMode => select로 스탯 조정
+  // devMode에서 select로 변경
   function handleChange(field, e){
     if(!onChangeStats) return;
     const val = parseInt(e.target.value, 10);
+
+    // 기존 값
+    const oldPoopCount = stats.poopCount || 0;
+
     const newStats = { ...stats, [field]: val };
+
+    // ★ 여기서 poopCount가 8 이상이 되는 순간, lastMaxPoopTime이 없으면 기록
+    if(field === "poopCount") {
+      // 이전 값이 8 미만이고, 새 값이 8 이상이며 lastMaxPoopTime이 없으면 세팅
+      if(oldPoopCount < 8 && val >= 8 && !newStats.lastMaxPoopTime) {
+        newStats.lastMaxPoopTime = Date.now();
+      }
+    }
+
     onChangeStats(newStats);
   }
 
+  // devMode용 select range
   const possibleFullness = [];
   for(let i=0; i<= 5 + (maxOverfeed||0); i++){
     possibleFullness.push(i);
@@ -63,12 +87,22 @@ export default function StatsPopup({
   for(let c=0; c<10; c++){
     possibleMistakes.push(c);
   }
+  const possiblePoop= [];
+  for(let i=0; i<=8; i++){
+    possiblePoop.push(i);
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-4 rounded shadow-xl w-80">
+      <div
+        className="bg-white p-4 rounded shadow-xl w-80"
+        style={{
+          maxHeight: "80vh",    // 화면 80% 높이까지만
+          overflowY: "auto",    // 세로 스크롤
+        }}
+      >
         <h2 className="text-lg font-bold mb-2">Digimon Status</h2>
-
+        
         {/* 기본 스탯 표시 */}
         <ul className="text-sm space-y-1">
           <li>Age: {age || 0}</li>
@@ -99,6 +133,11 @@ export default function StatsPopup({
           <li>Power: {power || 0}</li>
           <li>Attack Sprite: {attackSprite || 0}</li>
           <li>Alt Attack Sprite: {altAttackSprite || 0}</li>
+          <li>Training: {trainingCount}회</li>
+
+          <li>PoopCount: {poopCount}</li>
+          {/* ★ lastMaxPoopTime 표시 */}
+          <li>LastMaxPoopTime: {formatTimestamp(lastMaxPoopTime)}</li>
         </ul>
 
         {/* devMode => select box */}
@@ -151,6 +190,18 @@ export default function StatsPopup({
                 className="border ml-2"
               >
                 {possibleMistakes.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </label>
+
+            {/* poopCount */}
+            <label className="block mt-1">
+              PoopCount:
+              <select
+                value={poopCount}
+                onChange={(e)=> handleChange("poopCount",e)}
+                className="border ml-2"
+              >
+                {possiblePoop.map(p => <option key={p} value={p}>{p}</option>)}
               </select>
             </label>
           </div>
